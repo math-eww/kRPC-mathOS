@@ -4,8 +4,10 @@
 _A collection of classes and scripts for kRPC in Kerbal Space Program in Python_
 
 **Requirements:**
-Python 3
-krpc (pip install krpc)
+
+_Python 3_
+
+_krpc (pip install krpc)_
 
 **Classes:**
 
