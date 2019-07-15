@@ -1,0 +1,7 @@
+__pycache__/*
+.vscode/*
+venv/*
+init.bat
+deinit.bat
+*.pyc
+notes/*
