@@ -1,7 +1,7 @@
 # kRPC-mathOS
 ## Kerbal Space Program kRPC programs
 
-_A collection of classes and scripts for kRPC in Kerbal Space Program in Python_
+### A collection of classes and scripts for kRPC in Kerbal Space Program in Python
 
 **Requirements:**
 
