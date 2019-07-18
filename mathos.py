@@ -77,6 +77,11 @@ def main():
     inputField = userInputScreen.getInputField()
 
     #Button functions
+    def return_user_control():
+        print("Returning control to user")
+        vessel.control.throttle = 0.0
+        vessel.auto_pilot.disengage()
+        vessel.auto_pilot.sas = True
     def launch(targetAlt = 85000):
         try:
             # conn = krpc.connect(name='mathos:function')
@@ -84,6 +89,7 @@ def main():
             mathPilot.basicLaunch(85000,45000)
         finally:
             print("Aborting launch program")
+            return_user_control()
 
     def circularize(atApoapsis = False):
         try:
@@ -93,6 +99,7 @@ def main():
             maneuverAutopilot.executeNode(nextNode)
         finally:
             print("Aborting circularization program")
+            return_user_control()
 
     def executeNextNode():
         try:
@@ -102,14 +109,16 @@ def main():
             maneuverAutopilot.executeNode(nextNode)
         finally:
             print("Aborting node execution program")
+            return_user_control()
 
     def hover():
         try:
             # conn = krpc.connect(name='mathos:function')
             mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
-            mathPilot.hover(0)
+            mathPilot.hover(0, True)
         finally:
             print("Aborting hover program")
+            return_user_control()
 
     def hoverSlam(targetHeight = 20):
         try:
@@ -119,6 +128,7 @@ def main():
             mathPilot.hover(-1, True)
         finally:
             print("Aborting hover slam program")
+            return_user_control()
 
     def hoverAtAlt(targetAltitude = 1000):
         try:
@@ -127,10 +137,19 @@ def main():
             mathPilot.hoverAtAlt(targetAltitude)
         finally:
             print("Aborting hover at alt program")
+            return_user_control()
+
+    def test():
+        try:
+            mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
+            mathPilot.killHorizontalVelocity()
+        finally:
+            print("Aborting test program")
+            return_user_control()
     #Buttons
-    buttonsText= ['Hover', 'Land', 'Launch', 'Circularize', 'Execute Node']
-    functionsForButtons = [hover, hoverSlam, launch, circularize, executeNextNode]
-    buttonsScreen = InGameScreen.InGameScreen(conn,400,80,buttonsText,True,'right',800,5,0,0,False,True)
+    buttonsText= ['Hover', 'Land', 'Launch', 'Circularize', 'Execute Node', 'Test']
+    functionsForButtons = [hover, hoverSlam, launch, circularize, executeNextNode, test]
+    buttonsScreen = InGameScreen.InGameScreen(conn,400,80,buttonsText,True,'right',800,5,0,-50,False,True)
     buttons = buttonsScreen.getButtons()
     buttons_clicked = []
     for button in buttons:
