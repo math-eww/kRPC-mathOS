@@ -14,7 +14,7 @@ class InGameConsole:
         self.data = []
         for i in range(_numberOfLines):
             self.data.append('')
-        self.screen = InGameScreen.InGameScreen(conn,height,width,self.data,True,'bottom',width, 5, -125, 0)
+        self.screen = InGameScreen.InGameScreen(conn,height,width,self.data,True,'bottom',width, 5, -125, 40)
 
     def printToConsole(self,line):
         # _toRemove = list(self.data.keys())[0] #next(iter(self.data),None)
