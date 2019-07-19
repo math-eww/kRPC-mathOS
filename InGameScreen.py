@@ -3,116 +3,147 @@ import math
 import time
 
 class InGameScreen:
-    def __init__(self, conn, height, width, data, shouldAutosize, position, limit, margin=5, xoffset=0, yoffset=0, isInput = False, isButtons = False):
+    def __init__(self, conn, height, width, data, should_autosize, position, limit, margin=5, xoffset=0, yoffset=0, is_input = False, is_buttons = False):
         print("Initializing InGameScreen")
-        self.setUp(conn, height, width, data, shouldAutosize, position, limit, margin, xoffset, yoffset, isInput, isButtons)
-
-    def setUp(self, conn, height, width, data, shouldAutosize, position, limit, margin, xoffset, yoffset, isInput, isButtons):
-        self.limit = limit
-        self.position = position
-        self.margin = margin
-        _lineheight = 20
-        if (isButtons):
-            _lineheight = 30
-        if shouldAutosize:
-            height = len(data) * _lineheight + (self.margin * 2) 
-            print("Creating screen with autosizing height: " + str(height) + ", width: ", width)
-        else:
-            print("Creating screen with size " + str(height) + "h, " + str(width) + "w")
-        print("Set limit to " + str(limit))
         # Get canvas and size
         self.canvas = conn.ui.stock_canvas
         self.canvasSize = self.canvas.rect_transform.size
         # Add a panel to the canvas, then position and size it
         self.panel = self.canvas.add_panel()
         self.rect = self.panel.rect_transform
-        self.rect.size = (width, height)
-        if position:
-            if position == 'right':
-                self.rect.position = ((self.canvasSize[0]/2) - (self.rect.size[0]/2) + xoffset, 0 + yoffset)
-            if position == 'left':
-                self.rect.position = (-1*((self.canvasSize[0]/2) - (self.rect.size[0]/2)) + xoffset, 0 + yoffset)
-            if position == 'top':
-                self.rect.position = ((self.rect.size[0]/2) + xoffset,(self.canvasSize[1]/2) - (self.rect.size[1]/2) + yoffset)
-            if position == 'bottom':
-                self.rect.position = ((self.rect.size[0]/2) + xoffset,-1*((self.canvasSize[1]/2) - (self.rect.size[1]/2)) + yoffset)
+        # Store screen details
+        self.height = height
+        self.width = width
+        self.should_autosize = should_autosize
+        self.position = position
+        self.limit = limit
+        self.margin = margin
+        self.xoffset = xoffset
+        self.yoffset = yoffset
+        self.is_input = is_input
+        self.is_buttons = is_buttons
+        self.is_set_up = False
+        
+        self.set_up(data)
+
+    def set_up(self,data):
+        if self.is_set_up:
+            self._remove_all()
+        self._size_screen(data)
+        self._set_up_data_items(data)
+        self.is_set_up = True
+    
+    def _remove_all(self):
+        if self.is_input:
+            self.input_field.remove()
+        elif self.is_buttons:
+            for i in range(len(self.button_items)):
+                self.button_items[i].remove()
+        else:
+            for i in range(len(self.text_items)):
+                self.text_items[i].remove()
+            for i in range(len(self.value_items)):
+                self.value_items[i].remove()
+    
+    def _size_screen(self, data):
+        _lineheight = 20
+        if (self.is_buttons):
+            _lineheight = 30
+        if self.should_autosize:
+            self.height = len(data) * _lineheight + (self.margin * 2) 
+            print("Creating screen with autosizing height: " + str(self.height) + ", width: ", self.width)
+        else:
+            print("Creating screen with size " + str(self.height) + "h, " + str(self.width) + "w")
+        print("Set limit to " + str(self.limit))
+        self.rect.size = (self.width, self.height)
+        if self.position:
+            if self.position == 'right':
+                self.rect.position = ((self.canvasSize[0]/2) - (self.rect.size[0]/2) + self.xoffset, 0 + self.yoffset)
+            if self.position == 'left':
+                self.rect.position = (-1*((self.canvasSize[0]/2) - (self.rect.size[0]/2)) + self.xoffset, 0 + self.yoffset)
+            if self.position == 'top':
+                self.rect.position = ((self.rect.size[0]/2) + self.xoffset,(self.canvasSize[1]/2) - (self.rect.size[1]/2) + self.yoffset)
+            if self.position == 'bottom':
+                self.rect.position = ((self.rect.size[0]/2) + self.xoffset,-1*((self.canvasSize[1]/2) - (self.rect.size[1]/2)) + self.yoffset)
         else:
             self.rect.position = (0,0)
+    
+    def _set_up_data_items(self, data):
         i = 0
-        self.textItems = []
-        self.valueItems = []
-        if isInput:
+        self.text_items = []
+        self.value_items = []
+        if self.is_input:
             print("Adding user input field")
-            self.setUpInputItem()
-        elif isButtons:
+            self._set_up_input_item()
+        elif self.is_buttons:
             print("Adding buttons")
-            self.buttonItems = []
+            self.button_items = []
             for item in data:
-                self.setUpButtons(item, i)
+                self._set_up_buttons(item, i)
                 i += 1
         elif type(data) is dict:
             print("Adding text items: 2 columns")
             for key, value in data.items():
                 #Left side
-                self.setUpLeftItems(key, i, 0.60)
-                #self.textItems[i].rect_transform.size = (self.rect.size[0]*0.60, self.textItems[i].rect_transform.size[1])
+                self._set_up_left_items(key, i, 0.60)
                 #Right side
-                self.setUpRightItems(value, i, 0.40)
-                #self.valueItems[i].rect_transform.size = (self.rect.size[0]*0.40, self.valueItems[i].rect_transform.size[1])
+                self._set_up_right_items(value, i, 0.40)
                 i += 1
         elif type(data) is list:
             print("Adding text items: 1 column")
             for item in data:
-                self.setUpLeftItems(item, i, 1.0)
-                self.textItems[i].rect_transform.size = (self.rect.size[0], self.textItems[i].rect_transform.size[1])
+                self._set_up_left_items(item, i, 1.0)
+                self.text_items[i].rect_transform.size = (self.rect.size[0], self.text_items[i].rect_transform.size[1])
                 i += 1
 
-    def setUpLeftItems(self,text,i,widthPercentage):
+    def _set_up_left_items(self,text,i,widthPercentage):
         #Left side
-        self.textItems.append(self.panel.add_text(""))
-        self.textItems[i].color = (1,1,1)
-        self.textItems[i].size = 18
-        self.textItems[i].rect_transform.size = (self.rect.size[0]*widthPercentage, self.textItems[i].rect_transform.size[1])
-        self.textItems[i].rect_transform.position = (-1*(self.rect.size[0]/2) + ((self.rect.size[0]*widthPercentage)/2) + self.margin, ((self.rect.size[1]/2) - (self.textItems[i].rect_transform.size[1]/2)) - i*20 - self.margin)
-        self.textItems[i].content = str(text)
+        self.text_items.append(self.panel.add_text(""))
+        self.text_items[i].color = (1,1,1)
+        self.text_items[i].size = 18
+        self.text_items[i].rect_transform.size = (self.rect.size[0]*widthPercentage, self.text_items[i].rect_transform.size[1])
+        self.text_items[i].rect_transform.position = (-1*(self.rect.size[0]/2) + ((self.rect.size[0]*widthPercentage)/2) + self.margin, ((self.rect.size[1]/2) - (self.text_items[i].rect_transform.size[1]/2)) - i*20 - self.margin)
+        self.text_items[i].content = str(text)
 
-    def setUpRightItems(self,text,i,widthPercentage):
-        self.valueItems.append(self.panel.add_text(""))
-        self.valueItems[i].color = (1,1,1)
-        self.valueItems[i].size = 18
-        self.valueItems[i].rect_transform.size = (self.rect.size[0]*widthPercentage, self.valueItems[i].rect_transform.size[1])
-        self.valueItems[i].rect_transform.position = (1*(self.rect.size[0]/2) - ((self.rect.size[0]*widthPercentage)/2) - self.margin, ((self.rect.size[1]/2) - (self.valueItems[i].rect_transform.size[1]/2)) - i*20 - self.margin)
-        self.valueItems[i].content = str(text)[:self.limit]
+    def _set_up_right_items(self,text,i,widthPercentage):
+        self.value_items.append(self.panel.add_text(""))
+        self.value_items[i].color = (1,1,1)
+        self.value_items[i].size = 18
+        self.value_items[i].rect_transform.size = (self.rect.size[0]*widthPercentage, self.value_items[i].rect_transform.size[1])
+        self.value_items[i].rect_transform.position = (1*(self.rect.size[0]/2) - ((self.rect.size[0]*widthPercentage)/2) - self.margin, ((self.rect.size[1]/2) - (self.value_items[i].rect_transform.size[1]/2)) - i*20 - self.margin)
+        self.value_items[i].content = str(text)[:self.limit]
 
-    def setUpInputItem(self):
-        self.inputField = self.panel.add_input_field()
-        self.inputField.color = (1,1,1)
-        self.inputField.size = 18
-        self.inputField.rect_transform.size = (self.rect.size[0]-(self.margin*2), self.inputField.rect_transform.size[1])
-        self.inputField.rect_transform.position = (-1*(self.rect.size[0]/2) + ((self.rect.size[0])/2), ((self.rect.size[1]/2) - (self.inputField.rect_transform.size[1]/2)) - self.margin)
+    def _set_up_input_item(self):
+        self.input_field = self.panel.add_input_field()
+        self.input_field.color = (1,1,1)
+        self.input_field.size = 18
+        self.input_field.rect_transform.size = (self.rect.size[0]-(self.margin*2), self.input_field.rect_transform.size[1])
+        self.input_field.rect_transform.position = (-1*(self.rect.size[0]/2) + ((self.rect.size[0])/2), ((self.rect.size[1]/2) - (self.input_field.rect_transform.size[1]/2)) - self.margin)
     
-    def getInputField(self):
-        return self.inputField
+    def get_input_field(self):
+        return self.input_field
 
-    def setUpButtons(self,text,i):
+    def _set_up_buttons(self,text,i):
         widthPercentage = 1
-        self.buttonItems.append(self.panel.add_button(text))
-        self.buttonItems[i].color = (1,1,1)
-        self.buttonItems[i].size = 18
-        self.buttonItems[i].rect_transform.size = (self.rect.size[0]*widthPercentage, self.buttonItems[i].rect_transform.size[1])
-        self.buttonItems[i].rect_transform.position = (0,((self.rect.size[1]/2) - (self.buttonItems[i].rect_transform.size[1]/2)) - i*30 - self.margin)#(1*(self.rect.size[0]/2) - ((self.rect.size[0]*widthPercentage)/2) - self.margin, ((self.rect.size[1]/2) - (self.buttonItems[i].rect_transform.size[1]/2)) - i*40 - self.margin)
+        self.button_items.append(self.panel.add_button(text))
+        self.button_items[i].color = (1,1,1)
+        self.button_items[i].size = 18
+        self.button_items[i].rect_transform.size = (self.rect.size[0]*widthPercentage, self.button_items[i].rect_transform.size[1])
+        self.button_items[i].rect_transform.position = (0,((self.rect.size[1]/2) - (self.button_items[i].rect_transform.size[1]/2)) - i*30 - self.margin)#(1*(self.rect.size[0]/2) - ((self.rect.size[0]*widthPercentage)/2) - self.margin, ((self.rect.size[1]/2) - (self.button_items[i].rect_transform.size[1]/2)) - i*40 - self.margin)
     
-    def getButtons(self):
-        return self.buttonItems
+    def get_buttons(self):
+        return self.button_items
 
     def update(self,data):
+        if (len(data) != len(self.text_items)):
+            self.set_up(data)
         i = 0
         if type(data) is dict:
             for key, value in data.items():
-                self.textItems[i].content = key
-                self.valueItems[i].content = str(value)[:self.limit]
+                self.text_items[i].content = key
+                self.value_items[i].content = str(value)[:self.limit]
                 i += 1
         elif type(data) is list:
             for item in data:
-                self.textItems[i].content = str(item)
+                self.text_items[i].content = str(item)
                 i += 1

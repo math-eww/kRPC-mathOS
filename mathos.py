@@ -9,191 +9,174 @@ import MathXORCoPilot
 import InGameScreen
 import InGameConsole
 import consoleprint
+import streams
 
-conn = None
+print = print
 
-def main():
-    #Setup
-    processes = {}
-    global conn
-    conn = krpc.connect(name='mathos:main')
-    vessel = conn.space_center.active_vessel
-    consoleprint.setUpConsole(conn)
-    print = consoleprint.print
-    print("mathOS loaded")
-    print("kRPC version: " + str(conn.krpc.get_status().version))
+class MathOS:
+    def __init__(self):
+        self.conn = krpc.connect(name='mathos:main')
+        self.vessel = self.conn.space_center.active_vessel
+        self.data_streams = streams.Streams(self.conn)
+        self.processes = {}
+        self.running_process = ''
+        self.ui = {}
+        consoleprint.setUpConsole(self.conn)
+        global print
+        print = consoleprint.print
+        self.start_streams()
+        self.setup_ui()
+        self.maneuver_pilot = ManeuverAutopilot.ManeuverAutopilot(self)
+        self.math_pilot = MathXORCoPilot.MathXORCoPilot(self)
+        print("mathOS: loaded")
+        print("kRPC version: " + str(self.conn.krpc.get_status().version))
 
-    #Get telemetry
-    altitude = conn.add_stream(getattr, vessel.flight(), 'mean_altitude')
-    srf_altitude = conn.add_stream(getattr, vessel.flight(), 'surface_altitude')
-    apoapsis = conn.add_stream(getattr, vessel.orbit, 'apoapsis_altitude')
-    periapsis = conn.add_stream(getattr, vessel.orbit, 'periapsis_altitude')
-    srf_frame = vessel.orbit.body.reference_frame
-    obt_frame = vessel.orbit.body.non_rotating_reference_frame
-    srf_speed = conn.add_stream(getattr, vessel.flight(srf_frame), 'speed')
-    orb_speed = conn.add_stream(getattr, vessel.flight(obt_frame), 'speed')
-    dynamic_pressure = conn.add_stream(getattr, vessel.flight(srf_frame), 'dynamic_pressure')
-
-    def setupTelemetryScreen():
-        data = {
-            'Altitude': altitude(), 
-            'Srf Altitude': srf_altitude(), 
-            'Apoapsis': apoapsis(), 
-            'Periapsis': periapsis(), 
-            'Speed': orb_speed(), 
-            'Srf Speed': srf_speed(),
-            'Dyn Pressure': dynamic_pressure()
-            }
-        dataScreen = InGameScreen.InGameScreen(
-            conn,
-            200,
-            275,
-            data,
-            True,
-            'right',
-            12,
-            5,
-            0,
-            -250
-        )
-        return dataScreen
-    
-    telemetryScreen = setupTelemetryScreen()
-
-    def updateTelemetryScreen(dataScreen):
-        data = {
-            'Altitude': altitude(), 
-            'Srf Altitude': srf_altitude(), 
-            'Apoapsis': apoapsis(), 
-            'Periapsis': periapsis(), 
-            'Speed': orb_speed(), 
-            'Srf Speed': srf_speed(),
-            'Dyn Pressure': dynamic_pressure()
-        }
-        dataScreen.update(data)
-
-    #conn, height, width, data, shouldAutosize, position, limit, margin=5, xoffset=0, yoffset=0, isInput = False, isButtons = False
-    userInputScreen = InGameScreen.InGameScreen(conn,40,800,[''],False,'bottom',800,5,-125,0,True)
-    inputField = userInputScreen.getInputField()
-
-    #Button functions
-    def return_user_control():
-        print("Returning control to user")
-        vessel.control.throttle = 0.0
-        vessel.auto_pilot.disengage()
-        vessel.auto_pilot.sas = True
-    def launch(targetAlt = 85000):
-        try:
-            # conn = krpc.connect(name='mathos:function')
-            mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
-            mathPilot.basicLaunch(85000,45000)
-        finally:
-            print("Aborting launch program")
-            return_user_control()
-
-    def circularize(atApoapsis = False):
-        try:
-            # conn = krpc.connect(name='mathos:function')
-            maneuverAutopilot = ManeuverAutopilot.ManeuverAutopilot(conn)
-            nextNode = maneuverAutopilot.planCircularization(atApoapsis)
-            maneuverAutopilot.executeNode(nextNode)
-        finally:
-            print("Aborting circularization program")
-            return_user_control()
-
-    def executeNextNode():
-        try:
-            # conn = krpc.connect(name='mathos:function')
-            maneuverAutopilot = ManeuverAutopilot.ManeuverAutopilot(conn)
-            nextNode = vessel.control.nodes[0]
-            maneuverAutopilot.executeNode(nextNode)
-        finally:
-            print("Aborting node execution program")
-            return_user_control()
-
-    def hover():
-        try:
-            # conn = krpc.connect(name='mathos:function')
-            mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
-            mathPilot.hover(0, True)
-        finally:
-            print("Aborting hover program")
-            return_user_control()
-
-    def hoverSlam(targetHeight = 20):
-        try:
-            # conn = krpc.connect(name='mathos:function')
-            mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
-            mathPilot.hoverSlam(targetHeight)
-            mathPilot.hover(-1, True)
-        finally:
-            print("Aborting hover slam program")
-            return_user_control()
-
-    def hoverAtAlt(targetAltitude = 1000):
-        try:
-            # conn = krpc.connect(name='mathos:function')
-            mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
-            mathPilot.hoverAtAlt(targetAltitude)
-        finally:
-            print("Aborting hover at alt program")
-            return_user_control()
-
-    def test():
-        try:
-            mathPilot = MathXORCoPilot.MathXORCoPilot(conn)
-            mathPilot.killHorizontalVelocity()
-        finally:
-            print("Aborting test program")
-            return_user_control()
-    #Buttons
-    buttonsText= ['Hover', 'Land', 'Launch', 'Circularize', 'Execute Node', 'Test']
-    functionsForButtons = [hover, hoverSlam, launch, circularize, executeNextNode, test]
-    buttonsScreen = InGameScreen.InGameScreen(conn,400,80,buttonsText,True,'right',800,5,0,-50,False,True)
-    buttons = buttonsScreen.getButtons()
-    buttons_clicked = []
-    for button in buttons:
-        buttons_clicked.append(conn.add_stream(getattr, button, 'clicked'))
-
-    runningProcess = ''
-    while True:
+    def update(self):
         #buttons
         #perfor user's chosen function
         i = 0
-        for button_clicked in buttons_clicked:
+        for button_clicked in self.ui['buttons'][1]:
             if button_clicked():
-                if 'main' in processes:
-                    if processes['main'].isAlive():
-                        processes['main'].terminate()
-                    processes['main'].join
-                    del processes['main']
+                if 'main' in self.processes:
+                    if self.processes['main'].isAlive():
+                        self.processes['main'].terminate()
+                    self.processes['main'].join
+                    del self.processes['main']
                     print("Terminated")
-                buttons[i].clicked = False
-                buttonText = buttons[i].text.content
-                if runningProcess == buttonText:
-                    runningProcess = ''
+                self.ui['buttons'][0][i].clicked = False
+                button_text = self.ui['buttons'][0][i].text.content
+                if self.running_process == button_text:
+                    self.running_process = ''
                 else:
-                    _funcToExec = functionsForButtons[buttonsText.index(buttonText)]
+                    _funcToExec = self.ui['buttons'][3][self.ui['buttons'][2].index(button_text)]
                     # _funcToExec()
-                    processes['main'] = Thread(target=_funcToExec,daemon=True)
-                    processes['main'].start()
-                    runningProcess = buttonText
+                    self.processes['main'] = Thread(target=_funcToExec,daemon=True)
+                    self.processes['main'].start()
+                    self.running_process = button_text
                 break
             i += 1
         i = 0
         #reset buttons to false to prevent clicks while a function is running from being executed next
-        for button_clicked in buttons_clicked:
+        for button_clicked in self.ui['buttons'][1]:
             if button_clicked():
-                buttons[i].clicked = False
+                self.ui['buttons'][0][i].clicked = False
             i += 1
         #get user input
-        if inputField.changed:
-            inputField.changed = False
-            print(inputField.value)
+        if self.ui['input_field'].changed:
+            self.ui['input_field'].changed = False
+            print(self.ui['input_field'].value)
         #update telemetry
-        updateTelemetryScreen(telemetryScreen)
-        time.sleep(1)
+        _all_streams = self.data_streams.get_all_streams()
+        self.ui['telemetry_screen'].update({ list(_all_streams.keys())[i] : _all_streams[list(_all_streams.keys())[i]]() for i in range(len(_all_streams))})
+        #debugging
+        self.data_streams.print_streams()
+
+    def setup_ui(self):
+        #Setup telemetry screen
+        self.ui['telemetry_screen'] = self.ui_add_telemetry_screen()
+        #Setup user input field for console
+        user_input_screen = InGameScreen.InGameScreen(self.conn,40,800,[''],False,'bottom',800,5,-125,0,True) #conn, height, width, data, shouldAutosize, position, limit, margin=5, xoffset=0, yoffset=0, isInput = False, isButtons = False
+        self.ui['input_field'] = user_input_screen.get_input_field()
+        #Setup buttons
+        self.ui['buttons'] = self.ui_add_control_buttons()
+
+    def ui_add_telemetry_screen(self):
+        _all_streams = self.data_streams.get_all_streams()
+        _data = { list(_all_streams.keys())[i] : _all_streams[list(_all_streams.keys())[i]]() for i in range(len(_all_streams))}
+        return InGameScreen.InGameScreen(self.conn, 200, 275, _data, True, 'right', 12, 5, 0, -250)
+
+    def ui_add_control_buttons(self):
+        #Buttons
+        buttons_text= ['Hover', 'Land', 'Launch', 'Circularize', 'Execute Node', 'Test']
+        functions_for_buttons = [self._hover, self._hoverSlam, self._launch, self._circularize, self._executeNextNode, self._test]
+        buttons_screen = InGameScreen.InGameScreen(self.conn,400,80,buttons_text,True,'right',800,5,0,-50,False,True)
+        buttons = buttons_screen.get_buttons()
+        buttons_clicked = []
+        for button in buttons:
+            buttons_clicked.append(self.conn.add_stream(getattr, button, 'clicked'))
+        return [buttons, buttons_clicked, buttons_text, functions_for_buttons]
+    
+    #Button functions
+    def _return_user_control(self):
+        print("Returning control to user")
+        self.vessel.control.throttle = 0.0
+        self.vessel.auto_pilot.disengage()
+        self.vessel.auto_pilot.sas = True
+    def _launch(self,targetAlt = 85000):
+        try:
+            self.math_pilot.basicLaunch(85000,45000)
+        finally:
+            print("Aborting launch program")
+            self._return_user_control()
+    def _circularize(self,atApoapsis = False):
+        try:
+            nextNode = self.maneuver_pilot.plan_circularization(atApoapsis)
+            self.maneuver_pilot.execute_node(nextNode)
+        finally:
+            print("Aborting circularization program")
+            self._return_user_control()
+    def _executeNextNode(self):
+        try:
+            nextNode = self.vessel.control.nodes[0]
+            self.maneuver_pilot.execute_node(nextNode)
+        finally:
+            print("Aborting node execution program")
+            self._return_user_control()
+    def _hover(self):
+        try:
+            self.math_pilot.hover(0, True)
+        finally:
+            print("Aborting hover program")
+            self._return_user_control()
+    def _hoverSlam(self,targetHeight = 20):
+        try:
+            self.math_pilot.hoverSlam(targetHeight)
+            self.math_pilot.hover(-1, True)
+        finally:
+            print("Aborting hover slam program")
+            self._return_user_control()
+    def _hoverAtAlt(self,targetAltitude = 1000):
+        try:
+            self.math_pilot.hoverAtAlt(targetAltitude)
+        finally:
+            print("Aborting hover at alt program")
+            self._return_user_control()
+    def _test(self):
+        try:
+            self.math_pilot.killHorizontalVelocity()
+        finally:
+            print("Aborting test program")
+            self._return_user_control()
+
+    def start_streams(self):
+        self.data_streams.create_stream('apoapsis_altitude')
+        self.data_streams.create_stream('periapsis_altitude')
+        self.data_streams.create_stream('mean_altitude')
+        self.data_streams.create_stream('surface_altitude')
+        self.data_streams.create_stream('orb_speed')
+        self.data_streams.create_stream('srf_speed')
+        self.data_streams.create_stream('vertical_speed')
+        self.data_streams.create_stream('horizontal_speed')
+        self.data_streams.create_stream('dynamic_pressure')
+    
+    def get_math_pilot(self):
+        return self.math_pilot
+    
+    def get_maneuver_pilot(self):
+        return self.maneuver_pilot
+
+    def get_streams(self):
+        return self.data_streams
+    
+    def get_conn(self):
+        return self.conn
 
 
 if __name__ == '__main__':
-    main()
+    _mathOS = MathOS()
+    time.sleep(5)
+    _mathOS.data_streams.create_stream('ut')
+    #conn.add_stream(getattr, conn.space_center, 'ut')
+    while True:
+        _mathOS.update()
+        time.sleep(0.5)

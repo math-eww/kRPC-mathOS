@@ -5,15 +5,19 @@ import time
 from consoleprint import print
 
 class ManeuverAutopilot:
-    def __init__(self, conn):
+    def __init__(self, math_os):
         print("Initializing ManeuverAutopilot")
-        self.setUp(conn)
-    def setUp(self, conn):
-        self.conn = conn
-        self.ut = conn.add_stream(getattr, conn.space_center, 'ut')
-        self.vessel = conn.space_center.active_vessel
+        self.set_up(math_os)
+
+    def set_up(self, math_os):
+        self.conn = math_os.get_conn()
+        self.streams = math_os.get_streams()
+
+        self.ut = self.streams.get_stream('ut') #conn.add_stream(getattr, conn.space_center, 'ut')
+        self.vessel = self.conn.space_center.active_vessel
         print("Initialized ManeuverAutopilot")
-    def executeNode(self, node):
+
+    def execute_node(self, node):
         print("Executing node in " + str(node.time_to) + " with dV " + str(node.delta_v))
         # Engaging autopilot steering
         self.vessel.control.sas = False
@@ -28,7 +32,7 @@ class ManeuverAutopilot:
         self.vessel.auto_pilot.sas_mode = self.vessel.auto_pilot.sas_mode.maneuver
         self.vessel.auto_pilot.wait()
         # Get burn duration, start time, and warp to start - 5s lead
-        realBurnDuration = self.calculateBurnDuration(node.delta_v)
+        realBurnDuration = self.calculate_burn_duration(node.delta_v)
         burnStartTime = node.ut - (realBurnDuration/2.)
         self.conn.space_center.warp_to(burnStartTime - 30)
         self.vessel.auto_pilot.wait()
@@ -47,7 +51,8 @@ class ManeuverAutopilot:
             time.sleep(0.01)
         self.vessel.control.throttle = 0.0
         node.remove()
-    def calculateBurnDuration(self, deltaV):
+
+    def calculate_burn_duration(self, deltaV):
         # Calculate real burn duration using rocket equation
         availableThrust = self.vessel.available_thrust
         effectiveISP = self.vessel.specific_impulse * 9.82
@@ -55,7 +60,8 @@ class ManeuverAutopilot:
         massFinal = massInitial / math.exp(deltaV/effectiveISP)
         flow_rate = availableThrust / effectiveISP
         return (massInitial - massFinal) / flow_rate
-    def planCircularization(self, atApoapsis):
+
+    def plan_circularization(self, atApoapsis):
         # Creates a circularization node using vis-via equation 
         # atApoapsis: boolean, circularizes at periapsis if false
         print("Planning circularization, creating node")

@@ -13,6 +13,7 @@ def print(*args):
         if (inGameConsole):
             inGameConsole.printToConsole(arg)
     builtins.print(*args)
+#TODO: handle multi line prints
 
 #Intercept print function to send output to InGameConsole
 # def dprint(*args):
