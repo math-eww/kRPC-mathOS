@@ -34,16 +34,19 @@ class InGameScreen:
         self.is_set_up = True
     
     def _remove_all(self):
-        if self.is_input:
-            self.input_field.remove()
-        elif self.is_buttons:
-            for i in range(len(self.button_items)):
-                self.button_items[i].remove()
-        else:
-            for i in range(len(self.text_items)):
-                self.text_items[i].remove()
-            for i in range(len(self.value_items)):
-                self.value_items[i].remove()
+        try:
+            if self.is_input:
+                self.input_field.remove()
+            elif self.is_buttons:
+                for i in range(len(self.button_items)):
+                    self.button_items[i].remove()
+            else:
+                for i in range(len(self.text_items)):
+                    self.text_items[i].remove()
+                for i in range(len(self.value_items)):
+                    self.value_items[i].remove()
+        except ValueError as e:
+            print("Error removing: " + str(e))
     
     def _size_screen(self, data):
         _lineheight = 20
@@ -54,7 +57,7 @@ class InGameScreen:
             print("Creating screen with autosizing height: " + str(self.height) + ", width: ", self.width)
         else:
             print("Creating screen with size " + str(self.height) + "h, " + str(self.width) + "w")
-        print("Set limit to " + str(self.limit))
+        # print("Set limit to " + str(self.limit))
         self.rect.size = (self.width, self.height)
         if self.position:
             if self.position == 'right':

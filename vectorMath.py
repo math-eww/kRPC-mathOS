@@ -1,5 +1,4 @@
-import math, time
-from time import sleep
+import math
 
 # adds vectors: x + y
 def vector_add(x, y):

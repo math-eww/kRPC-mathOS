@@ -11,11 +11,12 @@ import InGameConsole
 import consoleprint
 import streams
 
+plainprint = print
 print = print
 
 class MathOS:
-    def __init__(self):
-        self.conn = krpc.connect(name='mathos:main')
+    def __init__(self, conn):
+        self.conn = conn
         self.vessel = self.conn.space_center.active_vessel
         self.data_streams = streams.Streams(self.conn)
         self.processes = {}
@@ -69,7 +70,7 @@ class MathOS:
         _all_streams = self.data_streams.get_all_streams()
         self.ui['telemetry_screen'].update({ list(_all_streams.keys())[i] : _all_streams[list(_all_streams.keys())[i]]() for i in range(len(_all_streams))})
         #debugging
-        self.data_streams.print_streams()
+        # self.data_streams.print_streams()
 
     def setup_ui(self):
         #Setup telemetry screen
@@ -87,8 +88,8 @@ class MathOS:
 
     def ui_add_control_buttons(self):
         #Buttons
-        buttons_text= ['Hover', 'Land', 'Launch', 'Circularize', 'Execute Node', 'Test']
-        functions_for_buttons = [self._hover, self._hoverSlam, self._launch, self._circularize, self._executeNextNode, self._test]
+        buttons_text= [           'Hover',     'Land',     'Launch',     'Circularize',     'Execute Node',        'Test' ]
+        functions_for_buttons = [ self._hover, self._land, self._launch, self._circularize, self._execute_next_node, self._test ]
         buttons_screen = InGameScreen.InGameScreen(self.conn,400,80,buttons_text,True,'right',800,5,0,-50,False,True)
         buttons = buttons_screen.get_buttons()
         buttons_clicked = []
@@ -102,23 +103,29 @@ class MathOS:
         self.vessel.control.throttle = 0.0
         self.vessel.auto_pilot.disengage()
         self.vessel.auto_pilot.sas = True
-    def _launch(self,targetAlt = 85000):
+    def _launch(self,target_alt = 85000):
         try:
-            self.math_pilot.basicLaunch(85000,45000)
+            self.math_pilot.basic_launch(85000,45000)
         finally:
             print("Aborting launch program")
             self._return_user_control()
-    def _circularize(self,atApoapsis = False):
+    def _land(self):
         try:
-            nextNode = self.maneuver_pilot.plan_circularization(atApoapsis)
-            self.maneuver_pilot.execute_node(nextNode)
+            self.math_pilot.land()
+        finally:
+            print("Aborting landing program")
+            self._return_user_control()
+    def _circularize(self,at_apoapsis = False):
+        try:
+            next_node = self.maneuver_pilot.plan_circularization(at_apoapsis)
+            self.maneuver_pilot.execute_node(next_node)
         finally:
             print("Aborting circularization program")
             self._return_user_control()
-    def _executeNextNode(self):
+    def _execute_next_node(self):
         try:
-            nextNode = self.vessel.control.nodes[0]
-            self.maneuver_pilot.execute_node(nextNode)
+            next_node = self.vessel.control.nodes[0]
+            self.maneuver_pilot.execute_node(next_node)
         finally:
             print("Aborting node execution program")
             self._return_user_control()
@@ -128,22 +135,22 @@ class MathOS:
         finally:
             print("Aborting hover program")
             self._return_user_control()
-    def _hoverSlam(self,targetHeight = 20):
-        try:
-            self.math_pilot.hoverSlam(targetHeight)
-            self.math_pilot.hover(-1, True)
-        finally:
-            print("Aborting hover slam program")
-            self._return_user_control()
-    def _hoverAtAlt(self,targetAltitude = 1000):
-        try:
-            self.math_pilot.hoverAtAlt(targetAltitude)
-        finally:
-            print("Aborting hover at alt program")
-            self._return_user_control()
+    # def _hover_slam(self,target_height = 20):
+    #     try:
+    #         self.math_pilot.hover_slam(target_height)
+    #         self.math_pilot.hover(-1, True)
+    #     finally:
+    #         print("Aborting hover slam program")
+    #         self._return_user_control()
+    # def _hover_at_alt(self,targetAltitude = 1000):
+    #     try:
+    #         self.math_pilot.hover_at_alt(targetAltitude)
+    #     finally:
+    #         print("Aborting hover at alt program")
+    #         self._return_user_control()
     def _test(self):
         try:
-            self.math_pilot.killHorizontalVelocity()
+            self.math_pilot.kill_horizontal_velocity()
         finally:
             print("Aborting test program")
             self._return_user_control()
@@ -170,13 +177,33 @@ class MathOS:
     
     def get_conn(self):
         return self.conn
-
+    
+    def remove_all_streams(self):
+        plainprint("Removing all streams")
+        self.data_streams.remove_all_streams()
+        for button_stream in self.ui['buttons'][1]:
+            button_stream.remove()
 
 if __name__ == '__main__':
-    _mathOS = MathOS()
-    time.sleep(5)
-    _mathOS.data_streams.create_stream('ut')
-    #conn.add_stream(getattr, conn.space_center, 'ut')
-    while True:
-        _mathOS.update()
-        time.sleep(0.5)
+    conn = krpc.connect(name='mathos:main')
+    running = True
+    while running:
+        try:
+            if conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
+                _mathOS = MathOS(conn)
+                time.sleep(5)
+                # _mathOS.data_streams.create_stream('ut')
+                while conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
+                    _mathOS.update()
+                    time.sleep(0.5)
+                plainprint("Waiting for flight to start")
+                time.sleep(1)
+        except krpc.error.RPCError as e:
+            _mathOS.remove_all_streams()
+            plainprint("KSP Scene Changed")
+            time.sleep(1)
+        except ConnectionAbortedError:
+            _mathOS.remove_all_streams()
+            plainprint("KSP has Disconnected")
+            running = False
+    conn.close()

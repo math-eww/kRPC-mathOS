@@ -3,6 +3,7 @@ import math
 import time
 
 from consoleprint import print
+from shipmath import *
 
 class ManeuverAutopilot:
     def __init__(self, math_os):
@@ -13,7 +14,7 @@ class ManeuverAutopilot:
         self.conn = math_os.get_conn()
         self.streams = math_os.get_streams()
 
-        self.ut = self.streams.get_stream('ut') #conn.add_stream(getattr, conn.space_center, 'ut')
+        self.ut = self.streams.get_stream('ut')
         self.vessel = self.conn.space_center.active_vessel
         print("Initialized ManeuverAutopilot")
 
@@ -32,34 +33,35 @@ class ManeuverAutopilot:
         self.vessel.auto_pilot.sas_mode = self.vessel.auto_pilot.sas_mode.maneuver
         self.vessel.auto_pilot.wait()
         # Get burn duration, start time, and warp to start - 5s lead
-        realBurnDuration = self.calculate_burn_duration(node.delta_v)
-        burnStartTime = node.ut - (realBurnDuration/2.)
-        self.conn.space_center.warp_to(burnStartTime - 30)
+        real_burn_duration = calculate_burn_duration(self.vessel, node.delta_v)
+        burn_start_time = node.ut - (real_burn_duration/2.)
+        self.conn.space_center.warp_to(burn_start_time - 30)
         self.vessel.auto_pilot.wait()
         # Execute burn
-        while self.ut() < burnStartTime:
-            #print("Waiting to burn " + str(self.ut()) + " | " + str(burnStartTime))
+        while self.ut() < burn_start_time:
+            #print("Waiting to burn " + str(self.ut()) + " | " + str(burn_start_time))
             time.sleep(0.1)
         print("Executing burn")
         self.vessel.control.throttle = 1.0
-        time.sleep(realBurnDuration - 0.1)
+        time.sleep(real_burn_duration - 0.1)
         #TODO: This could use some work
         print("Fine tuning")
         self.vessel.control.throttle = 0.05
-        remainingBurn = self.conn.add_stream(node.remaining_burn_vector, node.reference_frame)
-        while remainingBurn()[1] > 0.3:
+        remaining_burn = self.conn.add_stream(node.remaining_burn_vector, node.reference_frame)
+        while remaining_burn()[1] > 0.3:
             time.sleep(0.01)
         self.vessel.control.throttle = 0.0
+        remaining_burn.remove()
         node.remove()
 
-    def calculate_burn_duration(self, deltaV):
-        # Calculate real burn duration using rocket equation
-        availableThrust = self.vessel.available_thrust
-        effectiveISP = self.vessel.specific_impulse * 9.82
-        massInitial = self.vessel.mass
-        massFinal = massInitial / math.exp(deltaV/effectiveISP)
-        flow_rate = availableThrust / effectiveISP
-        return (massInitial - massFinal) / flow_rate
+    # def calculate_burn_duration(self, deltaV):
+    #     # Calculate real burn duration using rocket equation
+    #     available_thrust = self.vessel.available_thrust
+    #     effective_ISP = self.vessel.specific_impulse * 9.82
+    #     mass_initial = self.vessel.mass
+    #     mass_final = mass_initial / math.exp(deltaV/effective_ISP)
+    #     flow_rate = available_thrust / effective_ISP
+    #     return (mass_initial - mass_final) / flow_rate
 
     def plan_circularization(self, atApoapsis):
         # Creates a circularization node using vis-via equation 

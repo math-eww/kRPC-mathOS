@@ -27,8 +27,14 @@ class Streams:
         self.streams[stream].remove()
         del self.streams[stream]
     
+    def remove_all_streams(self):
+        for stream in self.streams:
+            self.streams[stream].remove()
+            # self.remove_stream(stream)
+        self.streams = {}
+    
     def get_stream(self, stream):
-        if hasattr(self.streams,stream):
+        if stream in self.streams:
             return self.streams[stream]
         elif stream in self._stream_strings:
             return self.add_stream(self._stream_strings[stream][0],self._stream_strings[stream][1])
