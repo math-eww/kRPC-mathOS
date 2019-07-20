@@ -261,16 +261,12 @@ if __name__ == '__main__':
                     _mathOS.restart_math_os()
                 else:
                     _mathOS = MathOS(conn)
-                # _mathOS.data_streams.create_stream('ut')
                 while conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
                     if restart_button_clicked():
                         plainprint("mathOS: restart button pressed")
                         restart_button.clicked = False
-                        # _mathOS.remove_all_streams()
-                        # _mathOS.delete_ui()
                         # conn.ui.clear()
-                        # conn.ui.message("Rebooting")
-                        # time.sleep(1)
+                        conn.ui.message("Rebooting mathOS")
                         break
                     else:
                         _mathOS.update()

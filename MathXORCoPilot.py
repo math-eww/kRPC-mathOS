@@ -111,7 +111,6 @@ class MathXORCoPilot:
         if not target_height:
             target_height = 10
         print("Hoverslamming at " + str(target_height))
-        g = get_g(self.vessel) #(6.674080043*10**-11) * self.vessel.orbit.body.mass / self.vessel.orbit.body.equatorial_radius**2  # Constant G = 6.674080043*10**-11 m³/s²
         while vertical_speed() > -1:
             time.sleep(0.5)
         self.vessel.auto_pilot.disengage()
@@ -126,7 +125,7 @@ class MathXORCoPilot:
         burning = False
         while executing:
             true_radar = radar_alt() - target_height
-            max_deceleration = get_max_deceleration(self.vessel) #(self.vessel.available_thrust / self.vessel.mass) - g
+            max_deceleration = get_max_deceleration(self.vessel)
             stop_distance = vertical_speed()**2 / (2 * max_deceleration)
             if burning:
                 ideal_throttle = stop_distance / true_radar

@@ -12,7 +12,7 @@ class InGameConsole:
     def setUp(self, conn, height, width):
         _numberOfLines = (math.floor(height/20))
         self.data = []
-        for i in range(_numberOfLines):
+        for _ in range(_numberOfLines):
             self.data.append('')
         self.screen = InGameScreen.InGameScreen(conn,height,width,self.data,True,'bottom',width, 5, -125, 40)
 
