@@ -29,7 +29,7 @@ class Streams:
     
     def remove_all_streams(self):
         print("Removing all streams", len(self.streams))
-        self.print_streams()
+        # self.print_streams()
         for stream in self.streams:
             if self.streams[stream]:
                 self.streams[stream].remove()

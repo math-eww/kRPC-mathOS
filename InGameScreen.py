@@ -25,8 +25,6 @@ class InGameScreen:
         self.is_set_up = False
         
         self.set_up(data)
-        print("Initialized InGameScreen: w: " + str(width) + ", h: " + str(height) + ", type: " +
-            ("buttons" if is_buttons else "input" if is_input else "screen (1 col)" if type(data) is list else "screen (2 col)"))
 
     def set_up(self,data):
         if self.is_set_up:
@@ -34,6 +32,8 @@ class InGameScreen:
         self._size_screen(data)
         self._set_up_data_items(data)
         self.is_set_up = True
+        print("Initialized InGameScreen: w: " + str(self.width) + ", h: " + str(self.height) + ", type: " +
+            ("buttons" if self.is_buttons else "input" if self.is_input else "screen (1 col)" if type(data) is list else "screen (2 col)"))
     
     def _remove_all(self):
         try:

@@ -11,6 +11,11 @@ def getConsole():
     global inGameConsole
     return inGameConsole
 
+def removeConsole():
+    global inGameConsole
+    inGameConsole.remove()
+    inGameConsole = None
+
 def print(*args):
     global inGameConsole
     for arg in args:

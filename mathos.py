@@ -194,9 +194,11 @@ class MathOS:
             button_stream.remove()
     
     def delete_ui(self):
+        plainprint("Removing UI")
         for key in self.ui['screens']:
             print(key)
             self.ui['screens'][key].remove()
+        plainprint("UI removed")
         # for key in self.ui:
         #     print(key)
         #     if key == "buttons":
@@ -208,6 +210,39 @@ class MathOS:
         #     else:
         #         self.ui[key].remove()
         #     print(key + " removed")
+    
+    def stop_all_processes(self):
+        plainprint("Stopping processes")
+        for key in self.processes:
+            if self.processes[key].isAlive():
+                self.processes[key].terminate()
+            self.processes[key].join
+            del self.processes[key]
+    
+    def restart_math_os(self):
+        print("mathOS: restarting")
+        # Stop any active threads
+        self.stop_all_processes()
+        # Remove streams and reset data_streams
+        self.remove_all_streams()
+        # Remove UI and UI streams
+        self.delete_ui()
+        # Reset variables
+        plainprint("mathOS: post")
+        self.processes = {}
+        self.running_process = ''
+        self.ui = {}
+        self.ui['screens'] = {}
+        consoleprint.setUpConsole(self.conn)
+        self.ui['screens']['console'] = consoleprint.getConsole()
+        self.start_streams()
+        self.setup_ui()
+        del self.maneuver_pilot
+        del self.math_pilot
+        self.maneuver_pilot = ManeuverAutopilot.ManeuverAutopilot(self.conn, self.data_streams)
+        self.math_pilot = MathXORCoPilot.MathXORCoPilot(self.conn,self.data_streams,self.maneuver_pilot)
+        print("mathOS: finished restarting")
+        print("kRPC version: " + str(self.conn.krpc.get_status().version))
 
 if __name__ == '__main__':
     import gc
@@ -217,18 +252,22 @@ if __name__ == '__main__':
     restart_button_clicked = None
     while running:
         try:
-            plainprint("Restart button:")
+            plainprint("Restart button: ", end="")
             restart_button_screen = InGameScreen.InGameScreen(conn,30,30,['↻'],True,'right',5,5,-80,-50,False,True)
             restart_button = restart_button_screen.get_buttons()[0]
             restart_button_clicked = conn.add_stream(getattr, restart_button, 'clicked')
             if conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
-                _mathOS = MathOS(conn)
+                if _mathOS:
+                    _mathOS.restart_math_os()
+                else:
+                    _mathOS = MathOS(conn)
                 # _mathOS.data_streams.create_stream('ut')
                 while conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
                     if restart_button_clicked():
+                        plainprint("mathOS: restart button pressed")
                         restart_button.clicked = False
-                        _mathOS.remove_all_streams()
-                        _mathOS.delete_ui()
+                        # _mathOS.remove_all_streams()
+                        # _mathOS.delete_ui()
                         # conn.ui.clear()
                         # conn.ui.message("Rebooting")
                         # time.sleep(1)
