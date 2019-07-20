@@ -6,13 +6,10 @@ from consoleprint import print
 from shipmath import *
 
 class ManeuverAutopilot:
-    def __init__(self, math_os):
-        print("Initializing ManeuverAutopilot")
-        self.set_up(math_os)
-
-    def set_up(self, math_os):
-        self.conn = math_os.get_conn()
-        self.streams = math_os.get_streams()
+    def __init__(self, conn, streams):
+        # print("Initializing ManeuverAutopilot")
+        self.conn = conn
+        self.streams = streams
 
         self.ut = self.streams.get_stream('ut')
         self.vessel = self.conn.space_center.active_vessel

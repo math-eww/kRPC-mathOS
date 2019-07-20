@@ -7,6 +7,10 @@ def setUpConsole(conn,height=200,width=800):
     global inGameConsole
     inGameConsole = InGameConsole.InGameConsole(conn,height,width)
 
+def getConsole():
+    global inGameConsole
+    return inGameConsole
+
 def print(*args):
     global inGameConsole
     for arg in args:

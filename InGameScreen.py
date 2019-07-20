@@ -4,7 +4,7 @@ import time
 
 class InGameScreen:
     def __init__(self, conn, height, width, data, should_autosize, position, limit, margin=5, xoffset=0, yoffset=0, is_input = False, is_buttons = False):
-        print("Initializing InGameScreen")
+        # print("Initializing InGameScreen")
         # Get canvas and size
         self.canvas = conn.ui.stock_canvas
         self.canvasSize = self.canvas.rect_transform.size
@@ -25,6 +25,8 @@ class InGameScreen:
         self.is_set_up = False
         
         self.set_up(data)
+        print("Initialized InGameScreen: w: " + str(width) + ", h: " + str(height) + ", type: " +
+            ("buttons" if is_buttons else "input" if is_input else "screen (1 col)" if type(data) is list else "screen (2 col)"))
 
     def set_up(self,data):
         if self.is_set_up:
@@ -54,9 +56,10 @@ class InGameScreen:
             _lineheight = 30
         if self.should_autosize:
             self.height = len(data) * _lineheight + (self.margin * 2) 
-            print("Creating screen with autosizing height: " + str(self.height) + ", width: ", self.width)
+            # print("Creating screen with autosizing height: " + str(self.height) + ", width: ", self.width)
         else:
-            print("Creating screen with size " + str(self.height) + "h, " + str(self.width) + "w")
+            # print("Creating screen with size " + str(self.height) + "h, " + str(self.width) + "w")
+            pass
         # print("Set limit to " + str(self.limit))
         self.rect.size = (self.width, self.height)
         if self.position:
@@ -76,16 +79,16 @@ class InGameScreen:
         self.text_items = []
         self.value_items = []
         if self.is_input:
-            print("Adding user input field")
+            # print("Adding user input field")
             self._set_up_input_item()
         elif self.is_buttons:
-            print("Adding buttons")
+            # print("Adding buttons")
             self.button_items = []
             for item in data:
                 self._set_up_buttons(item, i)
                 i += 1
         elif type(data) is dict:
-            print("Adding text items: 2 columns")
+            # print("Adding text items: 2 columns")
             for key, value in data.items():
                 #Left side
                 self._set_up_left_items(key, i, 0.60)
@@ -93,7 +96,7 @@ class InGameScreen:
                 self._set_up_right_items(value, i, 0.40)
                 i += 1
         elif type(data) is list:
-            print("Adding text items: 1 column")
+            # print("Adding text items: 1 column")
             for item in data:
                 self._set_up_left_items(item, i, 1.0)
                 self.text_items[i].rect_transform.size = (self.rect.size[0], self.text_items[i].rect_transform.size[1])
@@ -150,3 +153,8 @@ class InGameScreen:
             for item in data:
                 self.text_items[i].content = str(item)
                 i += 1
+    
+    def remove(self):
+        self._remove_all()
+        if self.panel:
+            self.panel.remove()

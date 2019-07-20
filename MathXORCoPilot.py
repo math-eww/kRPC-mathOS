@@ -8,14 +8,11 @@ from vectorMath import *
 from shipmath import *
 
 class MathXORCoPilot:
-    def __init__(self, math_os):
-        print("Initializing MathXORCoPilot")
-        self.set_up(math_os)
-
-    def set_up(self, math_os):
-        self.conn = math_os.get_conn()
-        self.streams = math_os.get_streams()
-        self.maneuver_pilot = math_os.get_maneuver_pilot()
+    def __init__(self, conn, streams, maneuver_pilot):
+        # print("Initializing MathXORCoPilot")
+        self.conn = conn
+        self.streams = streams
+        self.maneuver_pilot = maneuver_pilot
 
         self.vessel = self.conn.space_center.active_vessel
         self.ut = self.streams.get_stream('ut')
@@ -41,7 +38,6 @@ class MathXORCoPilot:
         while self.vessel.orbit.apoapsis_altitude < target_altitude:
             time.sleep(0.01)
             self.vessel.auto_pilot.target_pitch_and_heading((90 * (1 - (self.altitude() / turn_end) ** turn_exponent)),90)
-            pass
         print("Coasting to apoapsis")
         self.vessel.auto_pilot.disengage()
         self.vessel.control.throttle = 0.0
@@ -52,8 +48,11 @@ class MathXORCoPilot:
         self.conn.space_center.physics_warp_factor = 4
         while self.altitude() < 70000:
             time.sleep(0.01)
-            pass
         self.conn.space_center.physics_warp_factor = 0
+        self.vessel.control.throttle = 0.5
+        while self.vessel.orbit.apoapsis_altitude < target_altitude:
+            time.sleep(0.01)
+        self.vessel.control.throttle = 0.0
         circularization_node = self.maneuver_pilot.plan_circularization(True)
         self.maneuver_pilot.execute_node(circularization_node)
         
@@ -158,7 +157,7 @@ class MathXORCoPilot:
         autopilot.engage()
         print("Autopilot Target Direction: " + str(autopilot.target_direction) + " || " + str(autopilot.target_pitch) + " - " + str(autopilot.target_heading) + " - " + str(autopilot.target_roll))
         # autopilot.wait()
-        while autopilot.error > 1:
+        while autopilot.error > 2:
             time.sleep(0.01)
         print("Vessel oriented. Starting burn")
         burning = True

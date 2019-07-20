@@ -23,4 +23,10 @@ class InGameConsole:
         self.data.pop(0)
         #self.data.update({line: ''})
         self.data.append(line)
-        self.screen.update(self.data)
+        if self.screen:
+            self.screen.update(self.data)
+    
+    def remove(self):
+        if self.screen:
+            self.screen.remove()
+        self.screen = None

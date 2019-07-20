@@ -16,21 +16,27 @@ print = print
 
 class MathOS:
     def __init__(self, conn):
+        plainprint("mathOS: post")
         self.conn = conn
         self.vessel = self.conn.space_center.active_vessel
         self.data_streams = streams.Streams(self.conn)
         self.processes = {}
         self.running_process = ''
         self.ui = {}
+        self.ui['screens'] = {}
         consoleprint.setUpConsole(self.conn)
         global print
         print = consoleprint.print
+        self.ui['screens']['console'] = consoleprint.getConsole()
         self.start_streams()
         self.setup_ui()
-        self.maneuver_pilot = ManeuverAutopilot.ManeuverAutopilot(self)
-        self.math_pilot = MathXORCoPilot.MathXORCoPilot(self)
+        self.maneuver_pilot = ManeuverAutopilot.ManeuverAutopilot(self.conn, self.data_streams)
+        self.math_pilot = MathXORCoPilot.MathXORCoPilot(self.conn,self.data_streams,self.maneuver_pilot)
         print("mathOS: loaded")
         print("kRPC version: " + str(self.conn.krpc.get_status().version))
+
+    def __del__(self):
+        print("mathOS: shutting down")
 
     def update(self):
         #buttons
@@ -75,9 +81,11 @@ class MathOS:
     def setup_ui(self):
         #Setup telemetry screen
         self.ui['telemetry_screen'] = self.ui_add_telemetry_screen()
+        self.ui['screens']['telemetry_screen'] = self.ui['telemetry_screen']
         #Setup user input field for console
         user_input_screen = InGameScreen.InGameScreen(self.conn,40,800,[''],False,'bottom',800,5,-125,0,True) #conn, height, width, data, shouldAutosize, position, limit, margin=5, xoffset=0, yoffset=0, isInput = False, isButtons = False
         self.ui['input_field'] = user_input_screen.get_input_field()
+        self.ui['screens']['input_field_screen'] = user_input_screen
         #Setup buttons
         self.ui['buttons'] = self.ui_add_control_buttons()
 
@@ -91,6 +99,7 @@ class MathOS:
         buttons_text= [           'Hover',     'Land',     'Launch',     'Circularize',     'Execute Node',        'Test' ]
         functions_for_buttons = [ self._hover, self._land, self._launch, self._circularize, self._execute_next_node, self._test ]
         buttons_screen = InGameScreen.InGameScreen(self.conn,400,80,buttons_text,True,'right',800,5,0,-50,False,True)
+        self.ui['screens']['buttons_screen'] = buttons_screen
         buttons = buttons_screen.get_buttons()
         buttons_clicked = []
         for button in buttons:
@@ -179,31 +188,76 @@ class MathOS:
         return self.conn
     
     def remove_all_streams(self):
-        plainprint("Removing all streams")
+        # plainprint("Removing all streams")
         self.data_streams.remove_all_streams()
         for button_stream in self.ui['buttons'][1]:
             button_stream.remove()
+    
+    def delete_ui(self):
+        for key in self.ui['screens']:
+            print(key)
+            self.ui['screens'][key].remove()
+        # for key in self.ui:
+        #     print(key)
+        #     if key == "buttons":
+        #         for button in self.ui[key][0]:
+        #             print(button)
+        #             button.remove()
+        #     elif key == "input_field":
+        #         pass
+        #     else:
+        #         self.ui[key].remove()
+        #     print(key + " removed")
 
 if __name__ == '__main__':
+    import gc
     conn = krpc.connect(name='mathos:main')
     running = True
+    _mathOS = None
+    restart_button_clicked = None
     while running:
         try:
+            plainprint("Restart button:")
+            restart_button_screen = InGameScreen.InGameScreen(conn,30,30,['↻'],True,'right',5,5,-80,-50,False,True)
+            restart_button = restart_button_screen.get_buttons()[0]
+            restart_button_clicked = conn.add_stream(getattr, restart_button, 'clicked')
             if conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
                 _mathOS = MathOS(conn)
-                time.sleep(5)
                 # _mathOS.data_streams.create_stream('ut')
                 while conn.krpc.current_game_scene == conn.krpc.current_game_scene.flight:
-                    _mathOS.update()
-                    time.sleep(0.5)
-                plainprint("Waiting for flight to start")
+                    if restart_button_clicked():
+                        restart_button.clicked = False
+                        _mathOS.remove_all_streams()
+                        _mathOS.delete_ui()
+                        # conn.ui.clear()
+                        # conn.ui.message("Rebooting")
+                        # time.sleep(1)
+                        break
+                    else:
+                        _mathOS.update()
+                        time.sleep(0.5)
+                if _mathOS:
+                    _mathOS.remove_all_streams()
                 time.sleep(1)
+            else:
+                plainprint("Waiting for flight to start")
+            # del _mathOS
+            restart_button_clicked.remove()
+            restart_button_screen.remove()
         except krpc.error.RPCError as e:
-            _mathOS.remove_all_streams()
-            plainprint("KSP Scene Changed")
+            plainprint(e)
+            if _mathOS:
+                _mathOS.remove_all_streams()
+            if restart_button_clicked:
+                restart_button_clicked.remove()
+            plainprint("Scene Changed")
             time.sleep(1)
         except ConnectionAbortedError:
-            _mathOS.remove_all_streams()
-            plainprint("KSP has Disconnected")
+            if _mathOS:
+                _mathOS.remove_all_streams()
+            if restart_button_clicked:
+                restart_button_clicked.remove()
+            plainprint("Remote Disconnected")
             running = False
+        time.sleep(1)
     conn.close()

@@ -19,17 +19,20 @@ class Streams:
             'horizontal_speed':     [self.vessel.flight(self.vessel.orbit.body.reference_frame), 'horizontal_speed'],
         }
     
-    def add_stream(self, source, stream):
-        self.streams[stream] = self.conn.add_stream(getattr, source, stream)
-        return self.streams[stream]
+    def add_stream(self, source, stream, name):
+        self.streams[name] = self.conn.add_stream(getattr, source, stream)
+        return self.streams[name]
     
     def remove_stream(self, stream):
         self.streams[stream].remove()
         del self.streams[stream]
     
     def remove_all_streams(self):
+        print("Removing all streams", len(self.streams))
+        self.print_streams()
         for stream in self.streams:
-            self.streams[stream].remove()
+            if self.streams[stream]:
+                self.streams[stream].remove()
             # self.remove_stream(stream)
         self.streams = {}
     
@@ -37,13 +40,13 @@ class Streams:
         if stream in self.streams:
             return self.streams[stream]
         elif stream in self._stream_strings:
-            return self.add_stream(self._stream_strings[stream][0],self._stream_strings[stream][1])
+            return self.add_stream(self._stream_strings[stream][0],self._stream_strings[stream][1],stream)
     
     def create_stream(self, stream):
         if hasattr(self.streams,stream):
             return True
         elif stream in self._stream_strings:
-            self.add_stream(self._stream_strings[stream][0],self._stream_strings[stream][1])
+            self.add_stream(self._stream_strings[stream][0],self._stream_strings[stream][1],stream)
             return True
         else:
             return False
